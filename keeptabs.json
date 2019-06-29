@@ -1,0 +1,14 @@
+{
+	"timeout": 30,
+	"excludes": [ "\\.git" ],
+	"rules": [
+		{
+			"includes": [ "\\.go$" ],
+			"excludes": [ "#.*" ],
+			"commands": [
+				{ "shell": "rc", "script": "go test -race ./..." },
+				{ "shell": "rc", "script": "go install -v ./..." }
+			]
+		}
+	]
+}
