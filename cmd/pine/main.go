@@ -48,9 +48,8 @@ func pipe(in net.Conn, out net.Conn, msize uint32) {
 			return
 		}
 		if err := buffer.Ingest(chunk[:n]); err != nil {
-			logger.WithField("cause", err).Warning("Failed ingesting")
-		}
-		if err := buffer.PrintMessages(os.Stdout); err != nil {
+			logger.WithField("cause", err).Warning("Failed ingesting - is the buffer size large enough? Check -msize option against [TR]version messages")
+		} else if err := buffer.PrintMessages(os.Stdout); err != nil {
 			logger.WithField("cause", err).Warning("Failed logging ingested messages")
 		}
 		for n > 0 {
