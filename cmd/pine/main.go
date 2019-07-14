@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/google/gops/agent"
 	"github.com/nicolagi/pine/ring"
@@ -89,31 +88,6 @@ func splitAddr(s string) (network string, addr string, err error) {
 	return
 }
 
-func tryRemoveStaleSocket(address string) {
-	if _, err := net.Dial("unix", address); !isConnRefused(err) {
-		return
-	}
-	_ = os.Remove(address)
-}
-
-func isAddrInUse(err error) bool {
-	if err, ok := err.(*net.OpError); ok {
-		if err, ok := err.Err.(*os.SyscallError); ok {
-			return err.Err == syscall.EADDRINUSE
-		}
-	}
-	return false
-}
-
-func isConnRefused(err error) bool {
-	if err, ok := err.(*net.OpError); ok {
-		if err, ok := err.Err.(*os.SyscallError); ok {
-			return err.Err == syscall.ECONNREFUSED
-		}
-	}
-	return false
-}
-
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
@@ -149,9 +123,8 @@ func main() {
 	}
 
 	listener, err := net.Listen(lnet, laddr)
-	if isAddrInUse(err) {
-		tryRemoveStaleSocket(laddr)
-		listener, err = net.Listen(lnet, laddr)
+	if err != nil && lnet == "unix" {
+		listener, err = retryIfStaleUnixSocket(err, laddr)
 	}
 	if err != nil {
 		logger.WithField("cause", err).Fatal("Could not listen")
