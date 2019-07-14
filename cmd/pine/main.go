@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/google/gops/agent"
 	"github.com/nicolagi/pine/ring"
@@ -49,9 +48,8 @@ func pipe(in net.Conn, out net.Conn, msize uint32) {
 			return
 		}
 		if err := buffer.Ingest(chunk[:n]); err != nil {
-			logger.WithField("cause", err).Warning("Failed ingesting")
-		}
-		if err := buffer.PrintMessages(os.Stdout); err != nil {
+			logger.WithField("cause", err).Warning("Failed ingesting - is the buffer size large enough? Check -msize option against [TR]version messages")
+		} else if err := buffer.PrintMessages(os.Stdout); err != nil {
 			logger.WithField("cause", err).Warning("Failed logging ingested messages")
 		}
 		for n > 0 {
@@ -89,31 +87,6 @@ func splitAddr(s string) (network string, addr string, err error) {
 	return
 }
 
-func tryRemoveStaleSocket(address string) {
-	if _, err := net.Dial("unix", address); !isConnRefused(err) {
-		return
-	}
-	_ = os.Remove(address)
-}
-
-func isAddrInUse(err error) bool {
-	if err, ok := err.(*net.OpError); ok {
-		if err, ok := err.Err.(*os.SyscallError); ok {
-			return err.Err == syscall.EADDRINUSE
-		}
-	}
-	return false
-}
-
-func isConnRefused(err error) bool {
-	if err, ok := err.(*net.OpError); ok {
-		if err, ok := err.Err.(*os.SyscallError); ok {
-			return err.Err == syscall.ECONNREFUSED
-		}
-	}
-	return false
-}
-
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
@@ -134,7 +107,7 @@ func main() {
 		"msize":  *msize,
 	})
 
-	if *local == "" || *remote == "" || *msize <= 0 {
+	if *local == "" || *remote == "" || *msize == 0 {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -149,9 +122,8 @@ func main() {
 	}
 
 	listener, err := net.Listen(lnet, laddr)
-	if isAddrInUse(err) {
-		tryRemoveStaleSocket(laddr)
-		listener, err = net.Listen(lnet, laddr)
+	if err != nil && lnet == "unix" {
+		listener, err = retryIfStaleUnixSocket(err, laddr)
 	}
 	if err != nil {
 		logger.WithField("cause", err).Fatal("Could not listen")
