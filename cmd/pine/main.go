@@ -134,7 +134,7 @@ func main() {
 		"msize":  *msize,
 	})
 
-	if *local == "" || *remote == "" || *msize <= 0 {
+	if *local == "" || *remote == "" || *msize == 0 {
 		flag.Usage()
 		os.Exit(1)
 	}

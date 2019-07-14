@@ -7,7 +7,8 @@
 			"excludes": [ "#.*" ],
 			"commands": [
 				{ "shell": "rc", "script": "go test -race ./..." },
-				{ "shell": "rc", "script": "go install -v ./..." }
+				{ "shell": "rc", "script": "go install -v ./..." },
+				{ "shell": "rc", "script": "GOOS=plan9 GOARCH=386 go build -v ./..." }
 			]
 		}
 	]
