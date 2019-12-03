@@ -1,0 +1,16 @@
+{
+	"timeout": 30,
+	"exclude": [ "\\.git" ],
+	"shell": "rc",
+	"rules": [
+		{
+			"include": [ "\\.go$" ],
+			"exclude": [ "#.*" ],
+			"run": [
+				{ "script": "go test -race ./..." },
+				{ "script": "go install -v ./..." },
+				{ "script": "GOOS=plan9 GOARCH=386 go build -v ./..." }
+			]
+		}
+	]
+}
