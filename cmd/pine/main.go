@@ -13,10 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	errInvalidAddr = errors.New("invalid addr, expected, e.g., tcp!localhost!4321 or unix!/path/file.sock")
-)
-
 func pipe(in net.Conn, out net.Conn, msize uint32) {
 	defer func() {
 		_ = in.Close()
@@ -63,30 +59,6 @@ func pipe(in net.Conn, out net.Conn, msize uint32) {
 	}
 }
 
-func splitAddr(s string) (network string, addr string, err error) {
-	parts := strings.SplitN(s, "!", 3)
-	if len(parts) < 2 {
-		err = errInvalidAddr
-		return
-	}
-	network = parts[0]
-	switch network {
-	case "tcp":
-		if len(parts) != 3 {
-			err = errInvalidAddr
-			return
-		}
-		addr = parts[1] + ":" + parts[2]
-	case "unix":
-		if len(parts) != 2 {
-			err = errInvalidAddr
-			return
-		}
-		addr = parts[1]
-	}
-	return
-}
-
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
@@ -96,29 +68,21 @@ func main() {
 		log.WithField("cause", err).Warning("Could not start gops agent")
 	}
 
-	local := flag.String("local", "", "local address (TCP host and port or path to Unix socket)")
-	remote := flag.String("remote", "", "remote address (TCP host and port or path to Unix socket)")
-	msize := flag.Uint("msize", 8192, "9P message size")
+	var lnet, laddr, rnet, raddr string
+	flag.StringVar(&lnet, "lnet", "tcp", "local listen address network `type`")
+	flag.StringVar(&laddr, "l", "", "local listen `address`")
+	flag.StringVar(&rnet, "rnet", "tcp", "remote connect address network `type`")
+	flag.StringVar(&raddr, "r", "", "remote connect `address`")
+	msize := flag.Uint("msize", 65536, "buffer size")
 	flag.Parse()
 
 	logger := log.WithFields(log.Fields{
-		"local":  *local,
-		"remote": *remote,
-		"msize":  *msize,
+		"msize": *msize,
 	})
 
-	if *local == "" || *remote == "" || *msize == 0 {
+	if laddr == "" || raddr == "" || *msize == 0 {
 		flag.Usage()
 		os.Exit(1)
-	}
-
-	lnet, laddr, err := splitAddr(*local)
-	if err != nil {
-		logger.WithField("cause", err).Fatal("Could not understand local addr")
-	}
-	rnet, raddr, err := splitAddr(*remote)
-	if err != nil {
-		logger.WithField("cause", err).Fatal("Could not understand remote addr")
 	}
 
 	listener, err := net.Listen(lnet, laddr)
