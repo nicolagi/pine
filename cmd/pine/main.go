@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/gops/agent"
 	"github.com/nicolagi/pine/ring"
 	log "github.com/sirupsen/logrus"
 )
@@ -61,12 +60,6 @@ func pipe(in net.Conn, out net.Conn, msize uint32) {
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
-
-	if err := agent.Listen(agent.Options{
-		ShutdownCleanup: true,
-	}); err != nil {
-		log.WithField("cause", err).Warning("Could not start gops agent")
-	}
 
 	var lnet, laddr, rnet, raddr string
 	flag.StringVar(&lnet, "lnet", "tcp", "local listen address network `type`")
