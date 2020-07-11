@@ -18,15 +18,15 @@ type MessageBuffer struct {
 	curMessage []byte
 }
 
-func NewMessageBuffer(msize uint32) (*MessageBuffer, error) {
-	buffer, err := NewBuffer(msize)
+func NewMessageBuffer() (*MessageBuffer, error) {
+	buffer, err := NewBuffer()
 	if err != nil {
 		return nil, err
 	}
 	return &MessageBuffer{
 		buffer:     buffer,
 		curSize:    unknownSize,
-		curMessage: make([]byte, msize),
+		curMessage: make([]byte, 4),
 	}, nil
 }
 
@@ -55,6 +55,11 @@ next:
 			return fmt.Errorf("could only read %d of 4 bytes", n)
 		}
 		mb.curSize, _ = p.Gint32(sizeBytes)
+		if uint32(len(mb.curMessage)) < mb.curSize {
+			p := make([]byte, mb.curSize)
+			copy(p, mb.curMessage)
+			mb.curMessage = p
+		}
 	}
 	// If we have all the current message, decode that.
 	if mb.buffer.Readable()+4 >= mb.curSize {

@@ -19,7 +19,7 @@ func TestMessageBuffer(t *testing.T) {
 		return fc.Pkt, fc.String() + "\n"
 	}()
 	t.Run("ingest and print entire message", func(t *testing.T) {
-		mb, err := NewMessageBuffer(msize)
+		mb, err := NewMessageBuffer()
 		require.Nil(t, err)
 		mb.Ingest(inb)
 		out := bytes.NewBuffer(nil)
@@ -27,7 +27,7 @@ func TestMessageBuffer(t *testing.T) {
 		assert.Equal(t, outs, out.String())
 	})
 	t.Run("ingest message a bit at a time then print it", func(t *testing.T) {
-		mb, err := NewMessageBuffer(msize)
+		mb, err := NewMessageBuffer()
 		require.Nil(t, err)
 		i := 0
 		for ; i < len(inb)-4; i += 2 {
@@ -41,7 +41,7 @@ func TestMessageBuffer(t *testing.T) {
 		assert.Equal(t, outs, out.String())
 	})
 	t.Run("ingest two messages in one go and print both", func(t *testing.T) {
-		mb, err := NewMessageBuffer(msize)
+		mb, err := NewMessageBuffer()
 		require.Nil(t, err)
 		mb.Ingest(inb)
 		mb.Ingest(inb)

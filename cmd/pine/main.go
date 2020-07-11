@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func pipe(in net.Conn, out net.Conn, msize uint32) {
+func pipe(in net.Conn, out net.Conn) {
 	defer func() {
 		_ = in.Close()
 		_ = out.Close()
@@ -22,7 +22,7 @@ func pipe(in net.Conn, out net.Conn, msize uint32) {
 		"in":  in.RemoteAddr(),
 		"out": out.LocalAddr(),
 	})
-	buffer, err := ring.NewMessageBuffer(msize)
+	buffer, err := ring.NewMessageBuffer()
 	if err != nil {
 		logger.WithField("cause", err).Error("Could not create message buffer")
 		return
@@ -43,7 +43,7 @@ func pipe(in net.Conn, out net.Conn, msize uint32) {
 			return
 		}
 		if err := buffer.Ingest(chunk[:n]); err != nil {
-			logger.WithField("cause", err).Warning("Failed ingesting - is the buffer size large enough? Check -msize option against [TR]version messages")
+			logger.WithField("cause", err).Warning("Failed ingesting")
 		} else if err := buffer.PrintMessages(os.Stdout); err != nil {
 			logger.WithField("cause", err).Warning("Failed logging ingested messages")
 		}
@@ -66,14 +66,16 @@ func main() {
 	flag.StringVar(&laddr, "l", "", "local listen `address`")
 	flag.StringVar(&rnet, "rnet", "tcp", "remote connect address network `type`")
 	flag.StringVar(&raddr, "r", "", "remote connect `address`")
-	msize := flag.Uint("msize", 65536, "buffer size")
 	flag.Parse()
 
 	logger := log.WithFields(log.Fields{
-		"msize": *msize,
+		"lnet":  lnet,
+		"laddr": laddr,
+		"rnet":  rnet,
+		"raddr": raddr,
 	})
 
-	if laddr == "" || raddr == "" || *msize == 0 {
+	if laddr == "" || raddr == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -97,7 +99,7 @@ func main() {
 			logger.WithField("cause", err).Error("Could not connect")
 			continue
 		}
-		go pipe(remote, local, uint32(*msize))
-		go pipe(local, remote, uint32(*msize))
+		go pipe(remote, local)
+		go pipe(local, remote)
 	}
 }

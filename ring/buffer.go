@@ -2,7 +2,6 @@ package ring
 
 import (
 	"errors"
-	"fmt"
 )
 
 var (
@@ -18,13 +17,10 @@ type Buffer struct {
 	capacity     uint32
 }
 
-func NewBuffer(capacity uint32) (*Buffer, error) {
-	if capacity == 0 {
-		return nil, fmt.Errorf("zero capacity: %w", ErrIllegal)
-	}
+func NewBuffer() (*Buffer, error) {
 	return &Buffer{
-		capacity: capacity,
-		contents: make([]byte, capacity),
+		capacity: 1,
+		contents: make([]byte, 4),
 	}, nil
 }
 
@@ -44,8 +40,7 @@ func (b *Buffer) Read(p []byte) (n int, err error) {
 func (b *Buffer) Write(p []byte) (n int, err error) {
 	for ; n < len(p); n++ {
 		if b.readable == b.capacity {
-			err = ErrOverflow
-			break
+			b.realloc()
 		}
 		b.contents[b.writePointer] = p[n]
 		b.writePointer = (b.writePointer + 1) % b.capacity
@@ -56,4 +51,15 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 
 func (b *Buffer) Readable() uint32 {
 	return b.readable
+}
+
+func (b *Buffer) realloc() {
+	newb := &Buffer{
+		capacity: 2 * b.capacity,
+		contents: make([]byte, 2*b.capacity),
+	}
+	p := make([]byte, b.Readable())
+	b.Read(p)
+	newb.Write(p)
+	*b = *newb
 }
