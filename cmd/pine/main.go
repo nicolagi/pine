@@ -58,13 +58,30 @@ func pipe(in net.Conn, out net.Conn) {
 	}
 }
 
+type networkFlag string
+
+var errNetworkUnsupported = errors.New(`only "tcp" and "unix" are supported`)
+
+func (f *networkFlag) Set(value string) error {
+	if value != "tcp" && value != "unix" {
+		return errNetworkUnsupported
+	}
+	*f = networkFlag(value)
+	return nil
+}
+
+func (f *networkFlag) String() string {
+	return string(*f)
+}
+
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	var lnet, laddr, rnet, raddr string
-	flag.StringVar(&lnet, "lnet", "tcp", "local listen address network `type`")
+	var lnet, rnet networkFlag = "tcp", "tcp"
+	var laddr, raddr string
+	flag.CommandLine.Var(&lnet, "lnet", "local listen address network `type`")
 	flag.StringVar(&laddr, "l", "", "local listen `address`")
-	flag.StringVar(&rnet, "rnet", "tcp", "remote connect address network `type`")
+	flag.CommandLine.Var(&rnet, "rnet",  "remote connect address network `type`")
 	flag.StringVar(&raddr, "r", "", "remote connect `address`")
 	flag.Parse()
 
@@ -80,7 +97,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	listener, err := net.Listen(lnet, laddr)
+	listener, err := net.Listen(string(lnet), laddr)
 	if err != nil && lnet == "unix" {
 		listener, err = retryIfStaleUnixSocket(err, laddr)
 	}
@@ -93,7 +110,7 @@ func main() {
 			logger.WithField("cause", err).Error("Could not accept")
 			continue
 		}
-		remote, err := net.Dial(rnet, raddr)
+		remote, err := net.Dial(string(rnet), raddr)
 		if err != nil {
 			_ = local.Close()
 			logger.WithField("cause", err).Error("Could not connect")
