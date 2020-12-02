@@ -1,3 +1,6 @@
+2020-12-02T01:27:00Z I realized this piece of software is mostly unnecessary because 9pserve from plan9port can be used instead—I was not aware of 9pserve until recently.
+I'm still keeping this repository; it can be useful in hosts where plan9port is not installed; go-installing this package is quicker than building plan9port.
+
 # pine
 
 pine is a 9P proxy to inspect 9P dialogs
@@ -63,5 +66,3 @@ from plan9port):
 	  },
 	  "time": "2019-07-10T06:46:40+01:00"
 	}
-
-The project name means nothing, just a random noun that occurred to me.
